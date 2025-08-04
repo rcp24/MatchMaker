@@ -11,7 +11,7 @@
 ## Setup Process
 
 1. **Download the ZIP**  
-   - Go to the [GitHub repository](<repository_link_here>).  
+   - Go to the [GitHub repository](<https://github.com/rcp24/MatchMaker/tree/main>).  
    - Click on the **"Code"** button and select **"Download ZIP"**.  
    - Extract the downloaded ZIP file to your desired location.  
 
