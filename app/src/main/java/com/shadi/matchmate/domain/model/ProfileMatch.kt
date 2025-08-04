@@ -1,0 +1,9 @@
+package com.shadi.matchmate.domain.model
+
+data class ProfileMatch(
+val userId: String,
+val name: String,
+val profilePicUrl: String,
+val address: String,
+val status: Int = -1,
+)
