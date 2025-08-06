@@ -1,9 +1,6 @@
 package com.shadi.matchmate.presentation.allmatches
 
 import android.widget.Toast
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -21,7 +18,6 @@ import androidx.compose.material.pullrefresh.rememberPullRefreshState
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
@@ -35,10 +31,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
+import androidx.paging.LoadState
+import androidx.paging.compose.LazyPagingItems
+import androidx.paging.compose.collectAsLazyPagingItems
+import com.shadi.matchmate.domain.model.ProfileMatch
 import com.shadi.matchmate.presentation.components.TitleHeading
 import com.shadi.matchmate.ui.viewmodel.MatchMateViewModel
 import com.shadi.matchmate.ui.viewmodel.PersonProfileState
@@ -52,12 +51,11 @@ fun AllMatchesListingScreen(
     val matchMateViewModel: MatchMateViewModel = hiltViewModel()
 
 
-    LaunchedEffect(key1 = Unit) {
-        matchMateViewModel.getAllMatches(true)
-    }
+
     val uiState = matchMateViewModel.state
     val uiStateFlow =matchMateViewModel.uiStateFlow.collectAsState()
 
+    val items = matchMateViewModel.items.collectAsLazyPagingItems()
     ProfileMatchScreenContent(
         uiState = uiStateFlow,
         onProfileStatusUpdated = { userId, updatedStatus ->
@@ -67,8 +65,8 @@ fun AllMatchesListingScreen(
             )
         },
         refreshProfileMatches = {
-            matchMateViewModel.getAllMatches(fromNetwork = true)
         },
+        items
     )
 }
 
@@ -78,15 +76,9 @@ private fun ProfileMatchScreenContent(
     uiState: State<PersonProfileState>,
     onProfileStatusUpdated: (userId: String, updatedStatus: Int) -> Unit,
     refreshProfileMatches: () -> Unit,
+    items: LazyPagingItems<ProfileMatch>,
 ) {
-    val localContext = LocalContext.current
-    // val connectivityManager = remember { NetworkConnectivityManager(context = localContext) }
-    val isConnected = NetworkUtils.isNetworkAvailable(localContext)
 
-
-    val displayToast = { displayMessage: String ->
-        Toast.makeText(localContext, displayMessage, Toast.LENGTH_SHORT).show()
-    }
 
     val refreshScope = rememberCoroutineScope()
     var refreshing by remember { mutableStateOf(value = false) }
@@ -114,58 +106,45 @@ private fun ProfileMatchScreenContent(
         },
     ) { paddingValues ->
         Box(
-            modifier =
-            Modifier
+            modifier = Modifier
                 .fillMaxSize()
                 .background(Color.White)
                 .pullRefresh(state = pullRefreshState)
                 .padding(top = paddingValues.calculateTopPadding()),
         ) {
-            if (uiState.value.isLoading && uiState.value.personProfile.isEmpty()) {
-                Box(
-                    modifier = Modifier.fillMaxSize(),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
-                }
-            } else {
-                uiState.value.personProfile
-                    .let {
-                    LazyColumn(modifier = Modifier.fillMaxSize()) {
-                        stickyHeader {
-                            AnimatedVisibility(
-                                visible = !isConnected,
-                                enter = slideInVertically(),
-                                exit = slideOutVertically(),
-                            ) {
-                                Text(
-                                    modifier =
-                                    Modifier
-                                        .fillMaxWidth()
-                                        .background(color = MaterialTheme.colorScheme.error),
-                                    text = "No Internet please try again later",
-                                    color = MaterialTheme.colorScheme.onError,
-                                    textAlign = TextAlign.Center,
-                                )
+
+
+                        LazyColumn(
+                            Modifier
+                                .background(color = Color.White)
+                        ) {
+                            items(items.itemCount) { idx ->
+                                val item = items[idx]
+                                if (item != null) {
+                                    PersonProfileItem(
+                                        profileMatch = item,
+                                        onProfileAccepted = {
+                                            onProfileStatusUpdated(items[idx]!!.userId, 1)
+                                        },
+                                        onProfileDeclined = {
+                                            onProfileStatusUpdated(item.userId, 0)
+                                        },
+                                    )
+                                }
+                            }
+                            if (items.loadState.append is LoadState.Loading) {
+                                item {
+                                    Box(Modifier.fillMaxWidth()) {
+                                        CircularProgressIndicator(
+                                            modifier = Modifier
+                                                .align(Alignment.Center)
+                                                .padding(16.dp)
+                                        )
+                                    }
+                                }
                             }
                         }
-                        items(
-                            it.size
-                        ) { idx ->
-                            PersonProfileItem(
-                                profileMatch = it[idx],
-                                onProfileAccepted = {
-                                    onProfileStatusUpdated(it.userId, 1)
-                                    //displayToast(localContext.getString(R.string.user_action_accepted))
-                                },
-                                onProfileDeclined = {
-                                    onProfileStatusUpdated(it.userId, 0)
-                                    // displayToast(localContext.getString(R.string.user_action_declined))
-                                },
-                            )
-                        }
-                    }
-                }
+
                 Box(modifier = Modifier.fillMaxWidth().wrapContentHeight()) {
                     PullRefreshIndicator(
                         refreshing = refreshing,
@@ -173,7 +152,6 @@ private fun ProfileMatchScreenContent(
                         modifier = Modifier.align(alignment = Alignment.TopCenter),
                     )
                 }
-            }
         }
     }
 }
