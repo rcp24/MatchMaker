@@ -1,9 +1,11 @@
 package com.shadi.matchmate.data.local
 
+import androidx.paging.PagingSource
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
 import androidx.room.Query
+import com.shadi.matchmate.domain.model.ProfileMatch
 import kotlinx.coroutines.flow.Flow
 
 @Dao
@@ -12,7 +14,7 @@ interface PersonProfileDao {
     suspend fun insertProfiles(profileList: List<ProfileMatchEntity>)
 
     @Query("SELECT * FROM profile_match")
-    suspend fun getAllMatches(): List<ProfileMatchEntity>
+     fun getAllMatches(): PagingSource<Int, ProfileMatch>
 
     @Query("SELECT COUNT(*) FROM profile_match")
     suspend fun getCount(): Int

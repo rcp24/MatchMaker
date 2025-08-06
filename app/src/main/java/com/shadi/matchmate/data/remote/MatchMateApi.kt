@@ -9,6 +9,9 @@ interface MatchMateApi {
     @GET("api/")
     suspend fun getAllProfileMatches(@Query("results") count: Int): PersonProfileDto
 
+    @GET("api/")
+    suspend fun getAllProfileMatchesPaginated(@Query("results") count: Int, @Query("page") page:Int): PersonProfileDto
+
     companion object {
         const val BASE_URL = "https://randomuser.me/"
     }

@@ -87,9 +87,7 @@ fun PersonProfileItem(
             Box(modifier = Modifier.fillMaxWidth()) {
                 if (profileMatch.status == 0 || profileMatch.status == 1) {
                     Spacer(modifier = Modifier.height(18.dp))
-                    Box(
-                        modifier =
-                        Modifier
+                    Box(modifier = Modifier
                             .fillMaxWidth()
                             .padding(top=20.dp)
                             .height(height = 60.dp)
@@ -113,7 +111,8 @@ fun PersonProfileItem(
                             style = TextStyle(fontSize = 18.sp),
                         )
                     }
-                } else {
+                }
+                else {
                     Row(
                         modifier =
                         Modifier

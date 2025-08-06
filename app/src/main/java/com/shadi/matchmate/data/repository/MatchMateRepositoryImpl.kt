@@ -1,12 +1,14 @@
 package com.shadi.matchmate.data.repository
 
+
+import androidx.paging.ExperimentalPagingApi
+import androidx.paging.Pager
+import androidx.paging.PagingConfig
+import androidx.paging.PagingData
 import com.shadi.matchmate.data.local.PersonProfileDataBase
 import com.shadi.matchmate.data.mapper.toEntity
-import com.shadi.matchmate.data.mapper.toProfileMatch
-
-
 import com.shadi.matchmate.data.remote.MatchMateApi
-
+import com.shadi.matchmate.data.remote.MatchMateRemoteMediator
 import com.shadi.matchmate.domain.model.ProfileMatch
 import com.shadi.matchmate.domain.repository.MatchMateRepository
 import com.shadi.matchmate.util.Resource
@@ -27,22 +29,6 @@ class MatchMateRepositoryImpl @Inject constructor(
         fromNetwork: Boolean
     ): Flow<Resource<List<ProfileMatch>>> {
        return flow {
-           emit(Resource.Loading(true))
-           val localPersonProfileList= db.personProfileDao.getAllMatches()
-           emit(
-               Resource.Success(
-                   data = localPersonProfileList.map {
-                       it.toProfileMatch()
-                   }
-               )
-           )
-
-           val isDbEmpty = localPersonProfileList.isEmpty()
-           val shouldJustLoadFromCache = !isDbEmpty && !fromNetwork
-           if (shouldJustLoadFromCache) {
-               emit(Resource.Loading(false))
-               return@flow
-           }
            val remoteListings = try {
                matchMateApi.getAllProfileMatches(10)
            } catch (e: IOException) {
@@ -60,16 +46,22 @@ class MatchMateRepositoryImpl @Inject constructor(
                db.personProfileDao.insertProfiles(
                   listings.toEntity()
                )
-               emit(
-                   Resource.Success(
-                       data = db.personProfileDao
-                           .getAllMatches()
-                           .map { it.toProfileMatch() }
-                   ))
                emit(Resource.Loading(false))
            }
        }
    }
+
+    @OptIn(ExperimentalPagingApi::class)
+    override fun getProfileMatchesPaginated(
+        fromNetwork: Boolean
+    ): Flow<PagingData<ProfileMatch>> {
+
+        return Pager(
+            remoteMediator = MatchMateRemoteMediator(matchMateApi,db),
+            config = PagingConfig(pageSize = 10),
+            pagingSourceFactory = { db.personProfileDao.getAllMatches() }
+        ).flow
+    }
 
     override suspend fun updateProfileMatchStatus(userId: String, status: Int) {
         db.personProfileDao.updateStatus(userId = userId, status = status)
